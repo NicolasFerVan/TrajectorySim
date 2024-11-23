@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trajectory Simulator</title>
+
+    <style>
+      body {
+        background-color: rgb(240, 240, 240);
+      }
+      h1 {
+        font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+      }
+
+      p {
+        font-family: Arial;
+      }
+
+      .settings {
+        position: absolute;
+
+        top: 500px;
+      }
+
+      .result {
+        position: absolute;
+
+        top: 550px;
+      }
+
+      .calculateButton {
+        border: none;
+        background-color: black;
+        color: white;
+        cursor: pointer;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
+        font-weight: bold;
+        border-radius: 50px;
+        margin-left: 50px;
+      }
+
+      .resetButton {
+        border: none;
+        background-color: green;
+        color: white;
+        cursor: pointer;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
+        font-weight: bold;
+        border-radius: 50px;
+        margin-left: 25px;
+      }
+
+      .adjustment {
+        border: none;
+        background-color: black;
+        color: white;
+        cursor: pointer;
+        padding-top: 5px;
+        padding-bottom: 5px;
+        padding-left: 10px;
+        padding-right: 10px;
+        font-weight: bold;
+        border-radius: 50px;
+      }
+      .adjustmentOff {
+        background-color: rgb(240, 240, 240);
+        color: black;
+        cursor: default;
+      }
+
+      .heightUpButton {
+        height: 50px;
+        width: 50px;
+        background-color: rgb(240, 240, 240);
+        border-radius: 25px;
+        position: absolute;
+
+        top: 150px;
+      }
+
+      .heightUpImage {
+        background-color: rgb(240, 240, 240);
+        border-color: black;
+        height: 40px;
+        rotate: 90deg;
+        cursor: pointer;
+        border-radius: 25px;
+      }
+
+      .heightDownButton {
+        height: 50px;
+        width: 50px;
+        background-color: rgb(240, 240, 240);
+        border-radius: 25px;
+        position: absolute;
+
+        top: 250px;
+      }
+
+      .heightDownImage {
+        background-color: rgb(240, 240, 240);
+        border-color: black;
+        height: 40px;
+        cursor: pointer;
+        border-radius: 25px;
+        rotate: -90deg;
+      }
+
+      .coordinateSystem {
+        background: none;
+        position: absolute;
+
+        top: 150px;
+        left: 75px;
+      }
+
+      .ball {
+        height: 10px;
+        position: absolute;
+
+        top: 295px;
+        left: 70px;
+
+        --ballHeight: {height}
+      }
+
+      .arrow{
+        height: 10px;
+        rotate: 0deg;
+        transform-origin: left;
+        position: absolute;
+        top: 295px;
+        left: 75px;
+      }
+
+      .xVector{
+        height: 10px;
+        width: 0px;
+        position: absolute;
+        top: 295px;
+        left: 75px;
+      }
+
+      .yVector{
+        height: 10px;
+        width: 0px;
+        transform-origin: left;
+        rotate: -90deg;
+        position: absolute;
+        top: 295px;
+        left: 75px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Trajectory Simulation</h1>
+
+    <button class="heightUpButton" onclick="heightUp();">
+      <img src="heightArrow.png" class="heightUpImage" />
+    </button>
+    <button class="heightDownButton" onclick="heightDown();" class="adjustment">
+      <img src="heightArrow.png" class="heightDownImage" />
+    </button>
+
+    <button onclick="initialVelocityUp();" class="adjustment">
+      Initial velocity up
+    </button>
+    <button onclick="initialVelocityDown();" class="adjustment">
+      Initial velocity down
+    </button>
+
+    <button onclick="angleUp();" class="adjustment">Angle up</button>
+    <button onclick="angleDown();" class="adjustment">Angle down</button>
+
+    <button onclick="calculate();" class="calculateButton">
+      Calculate trajectory
+    </button>
+
+    <button onclick="reset()" class="resetButton">Reset</button>
+
+    <div>
+      <img
+        src="coordinateSystem.png"
+        alt="coordinate system"
+        class="coordinateSystem"
+      />
+
+      <img src="ball.png" alt="Ball" class="ball" id="ball" />
+
+      <img src="directionArrow.png" alt="Arrow" class="arrow" id="arrow" />
+
+      <img
+        src="velocityArrow.png"
+        alt="X-Vector"
+        class="xVector"
+        id="xVector"
+      />
+
+      <img src="velocityArrow.png" alt="Y-Vector" class="yVector" />
+    </div>
+
+    <p class="settings">Height: 0 m; Angle: 0 °; Velocity: 0 m/s</p>
+
+    <p class="result"></p>
+
+    <script>
+      let adjusting = true;
+      let calculating = false;
+      let finished = false;
+      let height = 0;
+      let distance = 0;
+      let initialVelocity = 0;
+      let initialAngle = 0;
+      let initialAngleRad = 0;
+      let xVelocity = 0;
+      let yVelocity = 0;
+      let velocity = 0;
+      let yAcc = -9.8;
+      let time = 0;
+      let calculatingInterval = "";
+      let flightAngle = 0;
+
+      //Adjusting
+      function xyVelocity() {
+        initialAngleRad = (initialAngle * Math.PI) / 180;
+        xVelocity = Math.cos(initialAngleRad) * initialVelocity;
+        xVelocity = Math.round(xVelocity * 100) / 100;
+        yVelocity = Math.sin(initialAngleRad) * initialVelocity;
+        yVelocity = Math.round(yVelocity * 100) / 100;
+      }
+
+      function heightDown() {
+        if (adjusting == true) {
+          if (height > 0) {
+            height -= 1;
+          }
+          console.log(height + " m");
+          showStats();
+        }
+      }
+
+      function heightUp() {
+        if (adjusting == true) {
+          height += 1;
+          console.log(height + " m");
+          showStats();
+        }
+      }
+
+      function initialVelocityUp() {
+        if (adjusting == true) {
+          initialVelocity += 1;
+          console.log(initialVelocity + " m/s");
+          showStats();
+        }
+      }
+
+      function initialVelocityDown() {
+        if (adjusting == true) {
+          if (initialVelocity > 0) {
+            initialVelocity -= 1;
+          }
+          console.log(initialVelocity + " m/s");
+          showStats();
+        }
+      }
+
+      function angleUp() {
+        if (adjusting == true) {
+          if (initialAngle < 90) {
+            initialAngle += 5;
+            xyVelocity();
+          }
+          console.log(initialAngle + " °");
+          showStats();
+          //console.log(xVelocity + " m/s horizontal");
+          //console.log(yVelocity + " m/s vertical");
+        }
+      }
+
+      function angleDown() {
+        if (adjusting == true) {
+          if (initialAngle > -90) {
+            initialAngle -= 5;
+            xyVelocity();
+          }
+          console.log(initialAngle + " °");
+          showStats();
+          //console.log(xVelocity + " m/s horizontal");
+          //console.log(yVelocity + " m/s vertical");
+        }
+      }
+
+      function showStats() {
+        if (adjusting == true) {
+          console.log("Height: " + height + " m");
+          console.log("Initial Velocity: " + initialVelocity + " m/s");
+          console.log("Angle: " + initialAngle + " °");
+
+          xyVelocity();
+
+          let ballStyle = document.querySelector(".ball");
+          ballStyle.style.top = 295 - height + "px";
+          let arrowStyle = document.querySelector(".arrow");
+          arrowStyle.style.top = 295 - height + "px";
+          arrowStyle.style.rotate = -initialAngle + "deg";
+          arrowStyle.style.width = initialVelocity + "px";
+          let xVectorStyle = document.querySelector(".xVector");
+          xVectorStyle.style.top = 295 - height + "px";
+          xVectorStyle.style.width = xVelocity + "px";
+          let yVectorStyle = document.querySelector(".yVector");
+          yVectorStyle.style.top = 295 - height + "px";
+          if (yVelocity > 0) {
+            yVectorStyle.style.rotate = -90 + "deg";
+            yVectorStyle.style.width = yVelocity + "px";
+          }
+          if (yVelocity < 0) {
+            yVectorStyle.style.rotate = 90 + "deg";
+            yVectorStyle.style.width = -yVelocity + "px";
+          }
+
+          let currentSettings = document.querySelector(".settings");
+          currentSettings.innerHTML =
+            " Height: " +
+            height +
+            " m;" +
+            " Angle: " +
+            initialAngle +
+            " °;" +
+            " Velocity: " +
+            initialVelocity +
+            " m/s";
+        }
+      }
+
+      function reset() {
+        adjusting = true;
+        calculating = false;
+        finished = false;
+        height = 0;
+        distance = 0;
+        initialVelocity = 0;
+        initialAngle = 0;
+        initialAngleRad = 0;
+        xVelocity = 0;
+        yVelocity = 0;
+        yAcc = -9.8;
+        time = 0;
+
+        let ballStyle = document.querySelector(".ball");
+        ballStyle.style.top = 295 + "px";
+        ballStyle.style.left = 70 + "px";
+
+        let adjustmentButton = document.querySelectorAll(".adjustment");
+        console.log(adjustmentButton);
+        adjustmentButton[0].classList.remove("adjustmentOff");
+        adjustmentButton[1].classList.remove("adjustmentOff");
+        adjustmentButton[2].classList.remove("adjustmentOff");
+        adjustmentButton[3].classList.remove("adjustmentOff");
+
+        let trajectoryResult = document.querySelector(".result");
+        trajectoryResult.innerHTML = "";
+        let xVectorStyle = document.querySelector(".xVector");
+        xVectorStyle.style.top = 295 - height + "px";
+        xVectorStyle.style.left = 75 + distance + "px";
+        xVectorStyle.style.width = xVelocity + "px";
+        let yVectorStyle = document.querySelector(".yVector");
+        yVectorStyle.style.top = 295 - height + "px";
+        yVectorStyle.style.left = 75 + "px";
+        yVectorStyle.style.width = 0 + "px";
+        yVectorStyle.style.rotate = -90 + "deg";
+        let arrowStyle = document.querySelector(".arrow");
+        arrowStyle.style.top = 295 - height + "px";
+        arrowStyle.style.rotate = -initialAngle + "deg";
+        arrowStyle.style.width = initialVelocity + "px";
+        arrowStyle.style.left = 75 + "px";
+
+        console.log("Height: " + height + " m");
+        console.log("Initial Velocity: " + initialVelocity + " m/s");
+        console.log("Angle: " + initialAngle + " °");
+        showStats();
+      }
+
+      //calculation
+      function calculate() {
+        if (finished == false) {
+          //ballStyle.style.top = "20px";
+
+          xyVelocity();
+          adjusting = false;
+          calculating = true;
+
+          let adjustmentButton = document.querySelectorAll(".adjustment");
+          console.log(adjustmentButton);
+          adjustmentButton[0].classList.add("adjustmentOff");
+          adjustmentButton[1].classList.add("adjustmentOff");
+          adjustmentButton[2].classList.add("adjustmentOff");
+          adjustmentButton[3].classList.add("adjustmentOff");
+          //adjustmentButton.classList.add("adjustmentOff");
+          calculatingInterval = setInterval(calculate2, 10);
+        }
+
+        function calculate2() {
+          if (calculating == true) {
+            time += 0.1;
+            distance += Math.round((xVelocity / 10) * 100) / 100;
+            yVelocity += Math.round((yAcc / 10) * 100) / 100;
+            yVelocity = Math.round(yVelocity * 100) / 100;
+            height += yVelocity / 10;
+            height = Math.round(height * 100) / 100;
+            yVelocity = Math.round(yVelocity * 100) / 100;
+            distance = Math.round(distance * 100) / 100;
+            time = Math.round(time * 100) / 100;
+            console.log(yVelocity);
+            console.log(height);
+
+            let ballStyle = document.querySelector(".ball");
+            ballStyle.style.top = 295 - height + "px";
+            ballStyle.style.left = distance + 70 + "px";
+            let xVectorStyle = document.querySelector(".xVector");
+            xVectorStyle.style.top = 295 - height + "px";
+            xVectorStyle.style.left = 75 + distance + "px";
+            xVectorStyle.style.width = xVelocity + "px";
+            let yVectorStyle = document.querySelector(".yVector");
+            yVectorStyle.style.top = 295 - height + "px";
+            yVectorStyle.style.left = 75 + distance + "px";
+            if (yVelocity > 0) {
+              yVectorStyle.style.rotate = -90 + "deg";
+              yVectorStyle.style.width = yVelocity + "px";
+            }
+            if (yVelocity < 0) {
+              yVectorStyle.style.rotate = 90 + "deg";
+              yVectorStyle.style.width = -yVelocity + "px";
+            }
+            let arrowStyle = document.querySelector(".arrow");
+            arrowStyle.style.top = 295 - height + "px";
+            arrowStyle.style.left = 75 + distance + "px";
+            velocity = Math.sqrt(xVelocity * xVelocity + yVelocity * yVelocity);
+            arrowStyle.style.width = velocity + "px";
+            flightAngle = (Math.acos(xVelocity / velocity) * 180) / Math.PI;
+            if (yVelocity > 0) {
+              arrowStyle.style.rotate = -flightAngle + "deg";
+            }
+            if (yVelocity < 0) {
+              arrowStyle.style.rotate = flightAngle + "deg";
+            }
+
+            /*function delay(milliseconds) {
+              return new Promise((resolve) => {
+                setTimeout(resolve, milliseconds);
+              });
+            }
+
+            async function init() {
+              console.log("Executed now");
+
+              await delay(1000);
+
+              console.log("Executed after 1 second wait");
+
+              await delay(1000);
+
+              console.log("Executed after 2 seconds wait");
+            }
+
+            init();*/
+
+            /*var wait = (ms) => {
+              const start = Date.now();
+              let now = start;
+              while (now - start < ms) {
+                now = Date.now();
+              }
+            };
+
+            console.log("Executed now");
+            wait(1000);
+            console.log("Executed after 1 second");*/
+
+            if (height <= 0) {
+              ballStyle.style.top = 295 + "px";
+              xVectorStyle.style.top = 295 + "px";
+
+              calculating = false;
+              finished = true;
+              clearInterval(calculatingInterval);
+              showResult();
+            } else {
+              console.log("random");
+              //setTimeout(calculate, 100);
+            }
+          }
+          console.log("Time: " + time + " s");
+          console.log("Distance: " + distance + " m");
+        }
+      }
+
+      function showResult() {
+        console.log("hi");
+        let trajectoryResult = document.querySelector(".result");
+        trajectoryResult.innerHTML =
+          "Time: " + time + " s;" + " Distance: " + distance + " m";
+      }
+    </script>
+  </body>
+</html>
