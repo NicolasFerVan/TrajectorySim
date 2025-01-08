@@ -223,6 +223,7 @@
       let initialAngleRad = 0;
       let xVelocity = 0;
       let yVelocity = 0;
+      let yVelocityDelayed = 0;
       let velocity = 0;
       let yAcc = -9.8;
       let time = 0;
@@ -353,6 +354,7 @@
         initialAngleRad = 0;
         xVelocity = 0;
         yVelocity = 0;
+        yVelocityDelayed = 0;
         yAcc = -9.8;
         time = 0;
 
@@ -406,13 +408,13 @@
           adjustmentButton[2].classList.add("adjustmentOff");
           adjustmentButton[3].classList.add("adjustmentOff");
           //adjustmentButton.classList.add("adjustmentOff");
-          calculatingInterval = setInterval(calculate2, 10);
+          calculatingInterval = setInterval(calculate2, 10^-9);
         }
 
-        function calculate2() {
+      function calculate2() {
           if (calculating == true) {
-            time += 0.1;
-            distance += Math.round((xVelocity / 10) * 100) / 100;
+            time += 0.001;
+            /*distance += Math.round((xVelocity / 10) * 100) / 100;
             yVelocity += Math.round((yAcc / 10) * 100) / 100;
             yVelocity = Math.round(yVelocity * 100) / 100;
             height += yVelocity / 10;
@@ -421,7 +423,16 @@
             distance = Math.round(distance * 100) / 100;
             time = Math.round(time * 100) / 100;
             console.log(yVelocity);
+            console.log(height);*/
+            yVelocityDelayed = yVelocity + (yAcc / 1000);
+            height += ((yVelocityDelayed + yVelocity) / 2) / 1000;
+            distance += xVelocity / 1000;
+            yVelocity = yVelocityDelayed;
+            console.log(yVelocity);
             console.log(height);
+
+            
+
 
             let ballStyle = document.querySelector(".ball");
             ballStyle.style.top = 295 - height + "px";
@@ -490,10 +501,16 @@
               ballStyle.style.top = 295 + "px";
               xVectorStyle.style.top = 295 + "px";
 
+              yVelocity = Math.round(yVelocity * 100) / 100;
+            height = Math.round(height * 100) / 100;
+            distance = Math.round(distance * 100) / 100;
+            time = Math.round(time * 100) / 100;
+
               calculating = false;
               finished = true;
               clearInterval(calculatingInterval);
               showResult();
+
             } else {
               console.log("random");
               //setTimeout(calculate, 100);
